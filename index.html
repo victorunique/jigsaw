@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Jigsaw Joy for Angela & Alfie</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Fredoka', sans-serif;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            overflow: hidden;
+        }
+        .screen {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .screen.active {
+            display: flex;
+            opacity: 1;
+        }
+        ::-webkit-scrollbar { display: none; }
+        .btn-bounce { transition: transform 0.1s; }
+        .btn-bounce:active { transform: scale(0.95); }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-200 to-purple-300 h-screen w-screen fixed inset-0">
+
+    <!-- HEADER -->
+    <header class="fixed top-0 left-0 right-0 h-16 bg-white/90 backdrop-blur shadow-md flex items-center justify-between px-4 z-20">
+        <div class="flex items-center gap-2 text-purple-700">
+            <!-- Puzzle Icon -->
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5"></path></svg>
+            <span class="text-xl font-bold tracking-tight">Jigsaw Joy</span>
+        </div>
+        
+        <div id="game-stats" class="hidden absolute left-1/2 transform -translate-x-1/2 bg-yellow-100 px-4 py-1 rounded-full border border-yellow-300 flex gap-3 text-yellow-800 font-bold text-sm sm:text-base shadow-sm">
+            <span id="timer-display">⏱️ 0:00</span>
+            <span id="score-display">🧩 0/0</span>
+        </div>
+
+        <button id="exit-btn" class="hidden p-2 bg-red-100 text-red-600 rounded-full hover:bg-red-200 transition-colors font-bold text-sm">
+            Exit
+        </button>
+    </header>
+
+    <!-- 1. SETUP SCREEN -->
+    <div id="setup-screen" class="screen active flex-col items-center justify-center h-full w-full p-4 pt-20 overflow-y-auto">
+        <div class="bg-white/80 backdrop-blur-md p-6 rounded-3xl shadow-xl max-w-md w-full text-center border-4 border-white">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Create Puzzle!</h1>
+            
+            <!-- Input Buttons -->
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <!-- Camera Button (Triggers JS Camera) -->
+                <button id="camera-btn" class="h-32 bg-blue-50 border-2 border-dashed border-blue-300 rounded-2xl flex flex-col items-center justify-center hover:bg-blue-100 text-blue-600 btn-bounce relative">
+                    <svg class="w-10 h-10 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    <span class="font-bold">Camera</span>
+                </button>
+                
+                <!-- Gallery Input (Hidden File Input) -->
+                <label class="cursor-pointer group relative btn-bounce">
+                    <input type="file" id="file-input" accept="image/*" class="hidden" />
+                    <div class="h-32 bg-purple-50 border-2 border-dashed border-purple-300 rounded-2xl flex flex-col items-center justify-center hover:bg-purple-100 text-purple-600">
+                        <svg class="w-10 h-10 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        <span class="font-bold">Gallery</span>
+                    </div>
+                </label>
+            </div>
+
+            <!-- Grid Selector -->
+            <div class="bg-gray-50 p-4 rounded-xl text-left mb-4">
+                <label class="block text-sm font-bold text-gray-600 mb-2 uppercase">Difficulty</label>
+                <div class="flex flex-wrap gap-2 justify-center" id="grid-buttons">
+                    <!-- Dynamic buttons injected by JS -->
+                </div>
+            </div>
+
+            <!-- Preview -->
+            <div id="preview-container" class="hidden animate-fade-in-up">
+                 <div class="mb-4 h-40 w-full relative rounded-xl overflow-hidden bg-gray-100 border border-gray-200">
+                    <img id="image-preview" src="" class="w-full h-full object-contain" />
+                 </div>
+                 <button id="start-btn" class="w-full py-4 bg-green-500 hover:bg-green-600 text-white text-xl font-bold rounded-2xl shadow-green-200 shadow-lg btn-bounce flex items-center justify-center gap-2">
+                    Start Game
+                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CAMERA MODAL -->
+    <div id="camera-modal" class="hidden fixed inset-0 z-50 bg-black flex flex-col items-center justify-center">
+        <div class="absolute top-4 right-4 z-10">
+            <button id="close-camera" class="p-2 bg-gray-800/50 rounded-full text-white">✕</button>
+        </div>
+        <video id="camera-feed" autoplay playsinline class="w-full h-full object-cover"></video>
+        <button id="snap-photo" class="absolute bottom-8 w-16 h-16 rounded-full border-4 border-white bg-red-500 shadow-lg"></button>
+    </div>
+
+    <!-- 2. GAME SCREEN -->
+    <div id="game-screen" class="screen flex items-center justify-center h-full w-full pt-16 pb-8 px-2">
+        <canvas id="puzzle-canvas" class="bg-white/50 rounded-xl shadow-2xl cursor-grab active:cursor-grabbing max-w-full max-h-full"></canvas>
+    </div>
+
+    <!-- 3. WIN MODAL -->
+    <div id="win-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-3xl p-8 max-w-sm w-full mx-4 text-center shadow-2xl border-4 border-yellow-400 transform scale-90 transition-transform duration-300" id="win-card">
+            <div class="text-6xl mb-4">🏆</div>
+            <h2 class="text-4xl font-bold text-purple-600 mb-2">Good Job!</h2>
+            <p class="text-gray-600 text-lg mb-6">
+                Time: <span id="final-time" class="font-bold text-purple-600">0:00</span>
+            </p>
+            <div class="flex gap-4 justify-center">
+                <button id="play-again-btn" class="px-8 py-3 bg-green-500 text-white rounded-full font-bold text-lg shadow-lg btn-bounce">
+                    Play Again
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOGIC -->
+    <script>
+        // --- Configuration ---
+        const SNAP_DISTANCE = 40; // Increased slightly for easier snapping
+        const TAB_SIZE_RATIO = 0.25;
+        const GRID_OPTIONS = [
+            { r: 3, c: 3, label: '3x3' },
+            { r: 4, c: 4, label: '4x4' },
+            { r: 5, c: 5, label: '5x5' },
+            { r: 3, c: 4, label: '3x4' },
+            { r: 4, c: 6, label: '4x6' }
+        ];
+
+        // --- State ---
+        let state = {
+            screen: 'setup', 
+            rows: 3,
+            cols: 3,
+            img: null,
+            pieces: [],
+            canvasWidth: 0,
+            canvasHeight: 0,
+            timerStart: 0,
+            timerInterval: null,
+            drag: null // { piece: PieceObject, offsetX: number, offsetY: number }
+        };
+
+        // --- Elements ---
+        const els = {
+            screens: {
+                setup: document.getElementById('setup-screen'),
+                game: document.getElementById('game-screen'),
+                win: document.getElementById('win-modal')
+            },
+            camera: {
+                btn: document.getElementById('camera-btn'),
+                modal: document.getElementById('camera-modal'),
+                video: document.getElementById('camera-feed'),
+                snap: document.getElementById('snap-photo'),
+                close: document.getElementById('close-camera')
+            },
+            input: document.getElementById('file-input'),
+            preview: {
+                container: document.getElementById('preview-container'),
+                img: document.getElementById('image-preview')
+            },
+            canvas: document.getElementById('puzzle-canvas'),
+            ctx: document.getElementById('puzzle-canvas').getContext('2d'),
+            ui: {
+                startBtn: document.getElementById('start-btn'),
+                gridContainer: document.getElementById('grid-buttons'),
+                stats: document.getElementById('game-stats'),
+                exitBtn: document.getElementById('exit-btn'),
+                timer: document.getElementById('timer-display'),
+                score: document.getElementById('score-display'),
+                finalTime: document.getElementById('final-time'),
+                playAgain: document.getElementById('play-again-btn'),
+                winCard: document.getElementById('win-card')
+            }
+        };
+
+        // --- Initialization ---
+        function init() {
+            // 1. Generate Grid Buttons
+            renderGridButtons();
+
+            // 2. Camera Logic (Live Stream)
+            els.camera.btn.addEventListener('click', openCamera);
+            els.camera.close.addEventListener('click', closeCamera);
+            els.camera.snap.addEventListener('click', capturePhoto);
+
+            // 3. File Input
+            els.input.addEventListener('change', handleFileSelect);
+
+            // 4. Game Control
+            els.ui.startBtn.addEventListener('click', startGame);
+            els.ui.exitBtn.addEventListener('click', resetGame);
+            els.ui.playAgain.addEventListener('click', resetGame);
+
+            // 5. Canvas Interaction (Touch/Mouse)
+            const c = els.canvas;
+            c.addEventListener('mousedown', handleStart);
+            c.addEventListener('touchstart', handleStart, { passive: false });
+            window.addEventListener('mousemove', handleMove);
+            window.addEventListener('touchmove', handleMove, { passive: false });
+            window.addEventListener('mouseup', handleEnd);
+            window.addEventListener('touchend', handleEnd);
+
+            // 6. Start Loop
+            requestAnimationFrame(gameLoop);
+        }
+
+        // --- Camera Functions ---
+        let stream = null;
+
+        async function openCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "environment" }, 
+                    audio: false 
+                });
+                els.camera.video.srcObject = stream;
+                els.camera.modal.classList.remove('hidden');
+            } catch (err) {
+                alert("Could not access camera. Please allow permissions or use 'Gallery'.");
+                console.error(err);
+            }
+        }
+
+        function closeCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            els.camera.modal.classList.add('hidden');
+        }
+
+        function capturePhoto() {
+            if (!stream) return;
+            // Draw video frame to an offscreen canvas
+            const vid = els.camera.video;
+            const cvs = document.createElement('canvas');
+            cvs.width = vid.videoWidth;
+            cvs.height = vid.videoHeight;
+            cvs.getContext('2d').drawImage(vid, 0, 0);
+            
+            // Set as game image
+            setImage(cvs.toDataURL('image/jpeg'));
+            closeCamera();
+        }
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (evt) => setImage(evt.target.result);
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function setImage(src) {
+            const img = new Image();
+            img.onload = () => {
+                state.img = img;
+                els.preview.img.src = src;
+                els.preview.container.classList.remove('hidden');
+            };
+            img.src = src;
+        }
+
+        // --- Grid UI ---
+        function renderGridButtons() {
+            els.ui.gridContainer.innerHTML = '';
+            GRID_OPTIONS.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = getGridBtnClass(opt.r, opt.c);
+                btn.innerText = opt.label;
+                btn.onclick = () => {
+                    state.rows = opt.r;
+                    state.cols = opt.c;
+                    renderGridButtons(); // Re-render to update active state
+                };
+                els.ui.gridContainer.appendChild(btn);
+            });
+        }
+
+        function getGridBtnClass(r, c) {
+            const isActive = state.rows === r && state.cols === c;
+            return `px-4 py-2 rounded-lg font-bold transition-all border-2 ${isActive 
+                ? 'bg-purple-600 text-white border-purple-600 shadow-md scale-105' 
+                : 'bg-white text-gray-400 border-gray-200 hover:bg-gray-50'}`;
+        }
+
+        // --- Game Setup ---
+
+        function startGame() {
+            if (!state.img) return;
+
+            // 1. Calculate Dimensions (Fit to Screen)
+            const maxWidth = Math.min(window.innerWidth - 32, 1024);
+            const maxHeight = Math.min(window.innerHeight - 100, 800);
+            const imgRatio = state.img.width / state.img.height;
+
+            let w = maxWidth;
+            let h = w / imgRatio;
+
+            if (h > maxHeight) {
+                h = maxHeight;
+                w = h * imgRatio;
+            }
+
+            // Set internal resolution
+            state.canvasWidth = w;
+            state.canvasHeight = h;
+            els.canvas.width = w;
+            els.canvas.height = h;
+
+            // 2. Generate Logic
+            generatePieces(w, h);
+
+            // 3. UI Transition
+            switchScreen('game');
+            els.ui.stats.classList.remove('hidden');
+            els.ui.exitBtn.classList.remove('hidden');
+            
+            // 4. Start Timer
+            state.timerStart = Date.now();
+            if (state.timerInterval) clearInterval(state.timerInterval);
+            state.timerInterval = setInterval(updateTimer, 1000);
+            updateTimer();
+        }
+
+        function resetGame() {
+            switchScreen('setup');
+            els.ui.stats.classList.add('hidden');
+            els.ui.exitBtn.classList.add('hidden');
+            if (state.timerInterval) clearInterval(state.timerInterval);
+            els.input.value = ''; // Reset file input
+        }
+
+        function switchScreen(name) {
+            state.screen = name; // Update the state so event listeners know we are playing
+            Object.values(els.screens).forEach(s => {
+                s.classList.remove('active');
+                if(name === 'win') s.classList.add('hidden');
+            });
+            
+            if (name === 'setup') els.screens.setup.classList.add('active');
+            if (name === 'game') els.screens.game.classList.add('active');
+            
+            if (name === 'win') {
+                els.screens.game.classList.add('active');
+                els.screens.win.classList.remove('hidden');
+                setTimeout(() => {
+                    els.screens.win.classList.remove('opacity-0');
+                    els.ui.winCard.classList.remove('scale-90');
+                    els.ui.winCard.classList.add('scale-100');
+                }, 10);
+            } else {
+                els.screens.win.classList.add('opacity-0');
+                els.screens.win.classList.add('hidden');
+            }
+        }
+
+        // --- Game Logic ---
+
+        function generatePieces(renderW, renderH) {
+            const rows = state.rows;
+            const cols = state.cols;
+            const pieceW = renderW / cols;
+            const pieceH = renderH / rows;
+
+            state.pieces = [];
+
+            const vEdges = Array(rows).fill(0).map(() => Array(cols - 1).fill(0).map(() => Math.random() > 0.5 ? 1 : -1));
+            const hEdges = Array(rows - 1).fill(0).map(() => Array(cols).fill(0).map(() => Math.random() > 0.5 ? 1 : -1));
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const shape = {
+                        top: r === 0 ? 0 : -hEdges[r - 1][c],
+                        right: c === cols - 1 ? 0 : vEdges[r][c],
+                        bottom: r === rows - 1 ? 0 : hEdges[r][c],
+                        left: c === 0 ? 0 : -vEdges[r][c - 1]
+                    };
+
+                    // Random scatter
+                    const x = Math.random() * (renderW - pieceW);
+                    const y = Math.random() * (renderH - pieceH);
+
+                    state.pieces.push({
+                        id: r * cols + c,
+                        x, y,
+                        correctX: c * pieceW,
+                        correctY: r * pieceH,
+                        width: pieceW, 
+                        height: pieceH,
+                        shape,
+                        isLocked: false
+                    });
+                }
+            }
+        }
+
+        function updateTimer() {
+            const diff = Math.floor((Date.now() - state.timerStart) / 1000);
+            const m = Math.floor(diff / 60);
+            const s = diff % 60;
+            const timeStr = `${m}:${s.toString().padStart(2, '0')}`;
+            els.ui.timer.innerText = `⏱️ ${timeStr}`;
+            els.ui.score.innerText = `🧩 ${state.pieces.filter(p => p.isLocked).length}/${state.pieces.length}`;
+            els.ui.finalTime.innerText = timeStr;
+        }
+
+        // --- Interaction Handlers (Fixed Scaling) ---
+
+        function getPointerPos(e) {
+            const rect = els.canvas.getBoundingClientRect();
+            // Scaling factors needed because CSS size (rect) might differ from internal canvas size
+            const scaleX = els.canvas.width / rect.width;
+            const scaleY = els.canvas.height / rect.height;
+            
+            // Safer check for touches
+            const hasTouches = e.touches && e.touches.length > 0;
+            const clientX = hasTouches ? e.touches[0].clientX : e.clientX;
+            const clientY = hasTouches ? e.touches[0].clientY : e.clientY;
+            
+            return {
+                x: (clientX - rect.left) * scaleX,
+                y: (clientY - rect.top) * scaleY
+            };
+        }
+
+        function handleStart(e) {
+            if (state.screen !== 'game') return;
+            if (e.touches) e.preventDefault(); // Stop scrolling
+            
+            const {x, y} = getPointerPos(e);
+
+            // Iterate backwards (top pieces first)
+            for (let i = state.pieces.length - 1; i >= 0; i--) {
+                const p = state.pieces[i];
+                if (p.isLocked) continue;
+
+                // Simple Box Hit Test
+                if (x > p.x && x < p.x + p.width && y > p.y && y < p.y + p.height) {
+                    // Move to end of array (bring to front visually)
+                    state.pieces.splice(i, 1);
+                    state.pieces.push(p);
+
+                    state.drag = {
+                        piece: p, // Store Reference, not index!
+                        offsetX: x - p.x,
+                        offsetY: y - p.y
+                    };
+                    break;
+                }
+            }
+        }
+
+        function handleMove(e) {
+            if (!state.drag) return;
+            e.preventDefault(); // Stop scrolling/selection
+            
+            const {x, y} = getPointerPos(e);
+            const p = state.drag.piece;
+
+            // Move piece
+            p.x = x - state.drag.offsetX;
+            p.y = y - state.drag.offsetY;
+
+            // Constrain to canvas
+            p.x = Math.max(-p.width/2, Math.min(state.canvasWidth - p.width/2, p.x));
+            p.y = Math.max(-p.height/2, Math.min(state.canvasHeight - p.height/2, p.y));
+        }
+
+        function handleEnd() {
+            if (!state.drag) return;
+            
+            const p = state.drag.piece;
+            const dist = Math.sqrt(Math.pow(p.x - p.correctX, 2) + Math.pow(p.y - p.correctY, 2));
+
+            // Snap?
+            if (dist < SNAP_DISTANCE) {
+                p.x = p.correctX;
+                p.y = p.correctY;
+                p.isLocked = true;
+                // Move locked piece to bottom of stack (visually behind free pieces)
+                // Finding index again is safe since we have object ref
+                const idx = state.pieces.indexOf(p);
+                if (idx > -1) {
+                    state.pieces.splice(idx, 1);
+                    state.pieces.unshift(p); // Add to start (bottom layer)
+                }
+            }
+
+            // Check Win
+            if (state.pieces.every(p => p.isLocked)) {
+                clearInterval(state.timerInterval);
+                switchScreen('win');
+            }
+
+            state.drag = null;
+        }
+
+        // --- Rendering ---
+        function gameLoop() {
+            // Corrected check to 'game' instead of 'playing'
+            if (state.screen === 'game' || state.screen === 'setup') render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function render() {
+            const ctx = els.ctx;
+            const cvs = els.canvas;
+            
+            ctx.clearRect(0, 0, cvs.width, cvs.height);
+
+            // Ghost Background (Faint)
+            if (state.img) {
+                ctx.save();
+                ctx.globalAlpha = 0.15;
+                ctx.drawImage(state.img, 0, 0, cvs.width, cvs.height);
+                ctx.restore();
+            }
+
+            // Draw Pieces
+            state.pieces.forEach(p => drawPiece(ctx, p));
+        }
+
+        function drawPiece(ctx, p) {
+            ctx.save();
+            
+            // If dragging this specific piece, add shadow
+            if (state.drag && state.drag.piece === p) {
+                ctx.shadowColor = "rgba(0,0,0,0.5)";
+                ctx.shadowBlur = 15;
+                ctx.shadowOffsetX = 5;
+                ctx.shadowOffsetY = 5;
+                // Raise z-index visually? (Already handled by array order)
+            }
+
+            ctx.translate(p.x, p.y);
+            
+            drawPiecePath(ctx, p.width, p.height, p.shape);
+            ctx.clip();
+
+            // Calculate source image mapping
+            const imgW = state.img.width;
+            const imgH = state.img.height;
+            const scaleX = imgW / state.canvasWidth;
+            const scaleY = imgH / state.canvasHeight;
+            const tab = TAB_SIZE_RATIO; 
+            
+            ctx.drawImage(
+                state.img,
+                (p.correctX - p.width * tab) * scaleX, 
+                (p.correctY - p.height * tab) * scaleY,
+                p.width * (1 + tab * 2) * scaleX, 
+                p.height * (1 + tab * 2) * scaleY,
+                -p.width * tab, 
+                -p.height * tab, 
+                p.width * (1 + tab * 2), 
+                p.height * (1 + tab * 2)
+            );
+
+            // Outline
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
+            ctx.lineWidth = 2;
+            drawPiecePath(ctx, p.width, p.height, p.shape);
+            ctx.stroke();
+            
+            ctx.restore();
+        }
+
+        function drawPiecePath(ctx, w, h, shape) {
+            const x = 0, y = 0;
+            const tab = Math.min(w, h) * TAB_SIZE_RATIO;
+            
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            
+            // Top
+            if (shape.top !== 0) {
+                ctx.lineTo(x + w * 0.35, y);
+                ctx.bezierCurveTo(x + w * 0.35, y - tab * shape.top, x + w * 0.65, y - tab * shape.top, x + w * 0.65, y);
+            }
+            ctx.lineTo(x + w, y);
+
+            // Right
+            if (shape.right !== 0) {
+                ctx.lineTo(x + w, y + h * 0.35);
+                ctx.bezierCurveTo(x + w + tab * shape.right, y + h * 0.35, x + w + tab * shape.right, y + h * 0.65, x + w, y + h * 0.65);
+            }
+            ctx.lineTo(x + w, y + h);
+
+            // Bottom
+            if (shape.bottom !== 0) {
+                ctx.lineTo(x + w * 0.65, y + h);
+                ctx.bezierCurveTo(x + w * 0.65, y + h + tab * shape.bottom, x + w * 0.35, y + h + tab * shape.bottom, x + w * 0.35, y + h);
+            }
+            ctx.lineTo(x, y + h);
+
+            // Left
+            if (shape.left !== 0) {
+                ctx.lineTo(x, y + h * 0.65);
+                ctx.bezierCurveTo(x - tab * shape.left, y + h * 0.65, x - tab * shape.left, y + h * 0.35, x, y + h * 0.35);
+            }
+            ctx.lineTo(x, y);
+            ctx.closePath();
+        }
+
+        init();
+    </script>
+</body>
+</html>
